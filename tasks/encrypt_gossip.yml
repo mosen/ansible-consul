@@ -28,6 +28,7 @@
   delegate_to: 127.0.0.1
 
 - name: Read gossip encryption key for servers that require it
+  delegate_to: localhost
   set_fact: consul_raw_key="{{ lookup('file', '/tmp/consul_raw.key') }}"
   when:
     - consul_raw_key is not defined

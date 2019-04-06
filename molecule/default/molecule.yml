@@ -18,7 +18,7 @@ provisioner:
         hosts:
           instance:
         vars:
-          foo: hello
+          consul_encrypt_enable: false
   lint:
     name: ansible-lint
 verifier:
