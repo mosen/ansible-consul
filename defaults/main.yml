@@ -104,14 +104,15 @@ consul_autopilot_disable_upgrade_migration: "{{ lookup('env', 'CONSUL_AUTOPILOT_
 consul_autopilot_upgrade_version_tag: "{{ lookup('env', 'CONSUL_AUTOPILOT_UPGRADE_VERSION_TAG') | default('', true) }}"
 
 ### Addresses
-consul_bind_address: "\
-  {% if ansible_system == 'FreeBSD' %}\
-    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface ]['ipv4'][0]['address'], true) }}\
-  {% elif ansible_os_family == 'Windows'  %}\
-    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_ip_addresses'][0], true) }}\
-  {% else %}\
-    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface | replace('-', '_')]['ipv4']['address'], true) }}\
-  {% endif %}"
+consul_bind_address: ~
+#consul_bind_address: "\
+#  {% if ansible_system == 'FreeBSD' %}\
+#    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface ]['ipv4'][0]['address'], true) }}\
+#  {% elif ansible_os_family == 'Windows'  %}\
+#    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_ip_addresses'][0], true) }}\
+#  {% else %}\
+#    {{ lookup('env','CONSUL_BIND_ADDRESS') | default(hostvars[inventory_hostname]['ansible_'+ consul_iface | replace('-', '_')]['ipv4']['address'], true) }}\
+#  {% endif %}"
 consul_advertise_address: "{{ consul_bind_address }}"
 consul_advertise_address_wan: "{{ consul_bind_address }}"
 consul_advertise_addresses:

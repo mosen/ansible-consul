@@ -1,0 +1,6 @@
+---
+- name: Converge
+  hosts: all
+  become: true  # Because vagrant user is not root
+  roles:
+    - role: ansible-consul

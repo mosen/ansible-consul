@@ -1,4 +1,4 @@
-# Pure internal helper variables
+---  # Pure internal helper variables
 
 _consul_lan_servers: "\
   {% set __consul_lan_servers = [] %}\
