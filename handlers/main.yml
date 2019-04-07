@@ -1,14 +1,40 @@
 ---
 # File: main.yml - Handlers for Consul
 
-- name: restart consul
-  import_tasks: restart_consul.yml
+- name: restart consul on Linux
+  service:
+    name: consul
+    state: restarted
+  when: ansible_os_family != "Windows"
+  listen: 'restart consul'
 
-- name: start consul
-  import_tasks: start_consul.yml
+- name: restart consul on windows
+  win_service:
+    name: consul
+    state: restarted
+  when: ansible_os_family == "Windows"
+  listen: 'restart consul'
 
-- name: reload consul configuration
-  import_tasks: reload_consul_conf.yml
+- name: start consul on Linux
+  service:
+    name: consul
+    state: started
+  when: ansible_os_family != "Windows"
+  listen: 'start consul'
+
+- name: start consul on windows
+  win_service:
+    name: consul
+    state: started
+  when: ansible_os_family == "Windows"
+  listen: 'start consul'
+
+# Use SIGHUP to reload most configurations as per https://www.consul.io/docs/agent/options.html
+# Cannot use `consul reload` because it requires the HTTP API to be bound to a non-loopback interface
+- name: reload consul configuration on Linux
+  command: "pkill --pidfile '{{ consul_run_path }}/consul.pid' --signal SIGHUP"
+  when: ansible_os_family != "Windows"
+  listen: 'reload consul configuration'
 
 - name: restart dnsmasq
   service:
@@ -16,13 +42,28 @@
     state: restarted
 
 - name: restart rsyslog
-  import_tasks: restart_rsyslog.yml
+  service:
+    name: rsyslog
+    state: restarted
+  when: ansible_os_family != "Windows"
+  listen: 'restart rsyslog'
 
 - name: restart syslog-ng
-  import_tasks: restart_syslogng.yml
+  service:
+    name: syslog-ng
+    state: restarted
+  listen: 'restart syslog-ng'
 
-- name: restart syslog-ng
-  import_tasks: restart_syslogng.yml
+- name: start consul snapshot on linux
+  service:
+    name: consul_snapshot
+    state: started
+    enabled: true
+  when: ansible_os_family != "Windows"
+  listen: 'start snapshot'
 
-- name: start snapshot
-  import_tasks: start_snapshot.yml
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+  when:
+    - ansible_service_mgr == "systemd"

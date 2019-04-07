@@ -5,21 +5,7 @@
   yum:
     name: dnsmasq
     state: present
-  when: ansible_os_family == "RedHat"
-  tags: dnsmasq, installation
-
-- name: Install Dnsmasq package
-  apt:
-    name: dnsmasq
-    state: present
-  when: ansible_os_family == "Debian"
-  tags: dnsmasq, installation
-
-- name: Install Dnsmasq package
-  pkgng:
-    name: dnsmasq
-    state: present
-  when: ansible_os_family == "FreeBSD"
+  when: ansible_os_family in ["RedHat", "Debian", "FreeBSD"]
   tags: dnsmasq, installation
 
 - name: Enable dnsmasq service

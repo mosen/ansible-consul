@@ -14,22 +14,26 @@ def test_consul_service_enabled_and_running(host):
 
 
 def test_consul_http_port(host):
-    s = host.socket("tcp://0.0.0.0:8500")
+    iface = host.interface("eth0").addresses
+    s = host.socket("tcp://%s:8500" % iface[0])
     assert s.is_listening
 
 
 def test_consul_rpc_port(host):
-    s = host.socket("tcp://0.0.0.0:8300")
+    iface = host.interface("eth0").addresses
+    s = host.socket("tcp://%s:8300" % iface[0])
     assert s.is_listening
 
 
 def test_consul_dns_port(host):
-    s = host.socket("udp://0.0.0.0:8600")
+    iface = host.interface("eth0").addresses
+    s = host.socket("udp://%s:8600" % iface[0])
     assert s.is_listening
 
 
 def test_consul_serf_port(host):
-    s = host.socket("tcp://0.0.0.0:8301")
+    iface = host.interface("eth0").addresses
+    s = host.socket("tcp://%s:8301" % iface[0])
     assert s.is_listening
 
 

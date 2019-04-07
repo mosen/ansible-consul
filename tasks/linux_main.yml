@@ -1,0 +1,179 @@
+---  # Tasks which are UNIX/Linux oriented
+- name: Gather global facts
+  import_tasks: facts_main.yml
+
+- name: Include user and group settings
+  import_tasks: user_group.yml
+
+- name: Include directory settings
+  import_tasks: dirs.yml
+
+- name: Check for existing Consul binary
+  stat:
+    path: "{{ consul_binary }}"
+  register: consul_binary_installed
+
+- name: Calculate whether to install consul binary
+  set_fact:
+    consul_install_binary: "{{ consul_install_upgrade or not consul_binary_installed.stat.exists }}"
+
+- name: Download consul - locally
+  include_tasks: download.yml
+  when:
+    - consul_install_binary | bool
+    - not consul_install_remotely | bool
+
+- name: Install OS packages and consul - locally
+  include_tasks: install.yml
+  when:
+    - consul_install_binary | bool
+    - not consul_install_remotely | bool
+
+- name: Install OS packages and consul - remotely
+  include_tasks: install_remote.yml
+  when:
+    - consul_install_binary | bool
+    - consul_install_remotely | bool
+
+# TODO: encrypt gossip
+- name: Configure Encryption
+  include_tasks: encrypt.yml
+  when:
+    - consul_encrypt_enable | bool
+    - consul_raw_key is defined
+
+- name: Create ACL configuration
+  include_tasks: acl.yml
+  when: consul_acl_enable | bool
+
+- name: Create Consul configuration
+  import_tasks: config.yml
+
+- name: Create TLS configuration
+  include_tasks: tls.yml
+  when: consul_tls_enable | bool
+
+- name: Create syslog configuration
+  import_tasks: syslog.yml
+  when:
+    - ansible_os_family != 'Windows'
+    - consul_configure_syslogd | bool
+
+- name: Create BSD init script
+  template:
+    src: consul_bsdinit.j2
+    dest: /etc/rc.d/consul
+    owner: root
+    group: wheel
+    mode: 0755
+  when: ansible_os_family == "FreeBSD"
+
+- name: Create SYSV init script
+  template:
+    src: consul_sysvinit.j2
+    dest: /etc/init.d/consul
+    owner: root
+    group: root
+    mode: 0755
+  when:
+    - not ansible_service_mgr == "systemd"
+    - not ansible_os_family == "Debian"
+    - not ansible_os_family == "FreeBSD"
+    - not ansible_os_family == "Solaris"
+
+- name: Create Debian init script
+  template:
+    src: consul_debianinit.j2
+    dest: /etc/init.d/consul
+    owner: root
+    group: root
+    mode: 0755
+  when:
+    - not ansible_service_mgr == "systemd"
+    - ansible_os_family == "Debian"
+    - not ansible_os_family == "FreeBSD"
+    - not ansible_os_family == "Solaris"
+
+- name: Create systemd script
+  template:
+    src: consul_systemd.service.j2
+    dest: /lib/systemd/system/consul.service
+    owner: root
+    group: root
+    mode: 0644
+  register: systemd_unit
+  notify: restart consul
+  when:
+    - ansible_service_mgr == "systemd"
+    - not ansible_os_family == "FreeBSD"
+    - not ansible_os_family == "Solaris"
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  when: systemd_unit is changed
+
+- name: Create smf manifest
+  template:
+    src: consul_smf_manifest.j2
+    dest: "{{ consul_smf_manifest }}"
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "Solaris"
+  register: smfmanifest
+
+- name: Import smf manifest
+  shell: "svccfg import {{ consul_smf_manifest }}"
+  when:
+    - smfmanifest is changed
+    - ansible_os_family == "Solaris"
+  tags: skip_ansible_lint
+- name: Import smf script
+  shell: "svcadm refresh consul"
+  when:
+    - smfmanifest is changed
+    - ansible_os_family == "Solaris"
+  tags: skip_ansible_lint
+
+- name: Enable Consul Snapshots on servers
+  include_tasks: snapshot.yml
+  when:
+    - ansible_service_mgr == "systemd"
+    - not ansible_os_family == "FreeBSD"
+    - not ansible_os_family == "Solaris"
+    - consul_snapshot | bool
+
+- block:
+
+    - name: Start Consul
+      service:
+        name: consul
+        state: started
+        enabled: true
+
+    - name: Check Consul HTTP API (via TCP socket)
+      wait_for:
+        delay: 15
+        port: "{{ consul_ports.http|int }}"
+        host: "{{ consul_addresses.http }}"
+      when: (consul_ports.http|int > -1) and (consul_addresses.http|ipaddr)
+
+    - name: Check Consul HTTP API (via unix socket)
+      wait_for:
+        delay: 15
+        path: "{{ consul_addresses.http | replace('unix://', '', 1) }}"
+      when: consul_addresses.http is match("unix://*")
+
+    - name: Create bootstrapped state file
+      file:
+        dest: "{{ consul_bootstrap_state }}"
+        state: touch
+
+    - include_tasks: ../tasks/iptables.yml
+      when: consul_iptables_enable | bool
+
+  when: not bootstrap_state.stat.exists
+
+- include_tasks: ../tasks/dnsmasq.yml
+  when: consul_dnsmasq_enable | bool

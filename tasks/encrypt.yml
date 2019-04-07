@@ -1,0 +1,14 @@
+---
+# Consul Gossip Encryption requires that all agents use the same 16-byte, Base64 encoded key.
+# The original implementation of this playbook attempts to generate one if none was declared, using the `keygen` command
+# on a remote node, and saving it locally (temporarily) as `/tmp/consul_raw.key`.
+#
+# I disagree with this approach because:
+#
+# - Randomness in the key generation makes the playbook non-idempotent.
+# - It's not a top-down approach (we just gather the key from the leader and propagate it to others).
+# - A 16-byte b64 string could have been generated in ansible without the consul CLI.
+# - The key is deleted after the playbook runs, so it's never known to the ansible controller what the key actually is
+#   unless you run the play again.
+#
+# Realising that this feature exists to make things "easy", the "easy/hack" mode should really be encryption disabled.

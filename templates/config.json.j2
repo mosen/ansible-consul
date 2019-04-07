@@ -63,7 +63,7 @@
     "enable_local_script_checks": {{ consul_enable_local_script_checks | bool | to_json }},
 
     {## Encryption and TLS ##}
-    {% if consul_encrypt_enable %}
+    {% if consul_encrypt_enable and consul_raw_key is defined %}
     "encrypt": "{{ consul_raw_key }}",
     {% endif %}
     {% if consul_disable_keyring_file %}
